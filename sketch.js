@@ -119,7 +119,7 @@ class Grid {
       this.level.length
     ]
 
-    if (sx === lx && sl === ll) {
+    if (sx <= lx && sl + sx >= ll + lx) {
       if (this.done === this.columns - 2) {
         this.level.colour = 'green'
         gamePlaying = false
