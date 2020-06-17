@@ -1,3 +1,20 @@
+class Slot {
+  constructor (length, xLimit, cellWidth, cellHeight) {
+    this.length = length
+    console.log(xLimit, length)
+    this.x = Math.floor(Math.random() * (xLimit - length + 1))
+    this.xLimit = xLimit
+    this.cellWidth = cellWidth
+    this.cellHeight = cellHeight
+  }
+
+  draw (yPos) {
+    fill('white')
+    rect(0, yPos * this.cellHeight, this.x * this.cellWidth, this.cellHeight)
+    rect((this.x + this.length) * this.cellWidth, yPos * this.cellHeight, (this.xLimit - 1) * this.cellWidth, this.cellHeight)
+  }
+}
+
 class Level {
   constructor (length, x, xLimit, yPos, cellWidth, cellHeight) {
     this.length = length
@@ -54,16 +71,22 @@ class Grid {
 
     this.maxLevelLength = Math.floor(rows / 2)
 
-    this.levels = [
-      (this.lastLevel = new Level(
+    this.slots = []
+
+    this.done = 0
+
+    for (let i = 1; i < columns; i++) {
+      const newSlot = new Slot(
         this.maxLevelLength,
-        Math.floor((this.maxLevelLength + 1) / 2),
-        columns,
-        height - this.rowHeight,
+        rows,
         this.columnWidth,
         this.rowHeight
-      ))
-    ]
+      )
+
+      this.slots.push(newSlot)
+    }
+
+    this.level = new Level(this.maxLevelLength, 0, this.rows, (this.columns - 1) * this.rowHeight, this.columnWidth, this.rowHeight)
   }
 
   draw () {
@@ -76,54 +99,36 @@ class Grid {
         line(0, y, this.width, y)
       }
     }
-    this.levels.forEach(level => level.draw())
-  }
 
-  add (length) {
-    const newLevel = new Level(
-      length,
-      this.lastLevel.x,
-      this.rows,
-      this.height - (this.levels.length + 1) * this.rowHeight,
-      this.columnWidth,
-      this.rowHeight
-    )
-    newLevel.isRight = this.lastLevel.isRight
-
-    this.secondLastLevel = this.lastLevel
-
-    this.levels.push((this.lastLevel = newLevel))
+    for (let i = 0; i < this.slots.length; i++) {
+      this.slots[i].draw(i + this.done)
+    }
+    this.level.draw()
   }
 
   step () {
-    this.lastLevel.step()
+    this.level.step()
   }
 
   place () {
-    const [x1, x2, l1, l2] = [
-      this.lastLevel.x,
-      this.secondLastLevel.x,
-      this.lastLevel.length,
-      this.secondLastLevel.length
+    const lastSlot = this.slots[this.columns - this.done - 2]
+    const [sx, sl, lx, ll] = [
+      lastSlot.x,
+      lastSlot.length,
+      this.level.x,
+      this.level.length
     ]
 
-    const lowerBound = Math.max(x1, x2)
-    const upperBound = Math.min(x1 + l1, x2 + l2)
-
-    const length = upperBound - lowerBound
-
-    if (length > 0) {
-      this.lastLevel.x = lowerBound
-      this.lastLevel.length = length
-
-      this.add(length)
-      if (this.levels.length > this.columns) {
-        this.secondLastLevel.colour = 'green'
+    if (sx === lx && sl === ll) {
+      if (this.done === this.columns - 2) {
+        this.level.colour = 'green'
         gamePlaying = false
         clearInterval(t)
       }
+      this.slots.pop()
+      this.done++
     } else {
-      this.lastLevel.colour = 'red'
+      this.level.colour = 'red'
       gamePlaying = false
       clearInterval(t)
     }
@@ -135,7 +140,7 @@ let g, t, gamePlaying
 function setup () {
   createCanvas(400, 400)
   g = new Grid(400, 400, 7, 10)
-  g.add(g.maxLevelLength)
+
   gamePlaying = true
   t = setInterval(g.step.bind(g), 100)
 }
